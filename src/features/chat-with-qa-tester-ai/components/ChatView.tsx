@@ -23,25 +23,20 @@ export default function ChatView() {
 
   // Auto-select or create a conversation on mount
   useEffect(() => {
-    if (loadingConvos || createConversation.isPending) return;
+    if (loadingConvos) return;
+    if (createConversation.isPending) return;
+    if (activeConversationId) return;
+    if (!conversations) return;
 
-    if (!activeConversationId && conversations) {
-      if (conversations.length > 0) {
-        setActiveConversationId(conversations[0].id);
-      } else {
-        // Auto-create a default conversation
-        createConversation.mutate("New Conversation", {
-          onSuccess: (convo) => setActiveConversationId(convo.id),
-        });
-      }
+    if (conversations.length > 0) {
+      setActiveConversationId(conversations[0].id);
+    } else {
+      createConversation.mutate("New Conversation", {
+        onSuccess: (convo) => setActiveConversationId(convo.id),
+      });
     }
-  }, [
-    conversations,
-    activeConversationId,
-    loadingConvos,
-    setActiveConversationId,
-    createConversation,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversations, loadingConvos]);
 
   const handleSend = useCallback(
     (content: string) => {
@@ -57,8 +52,10 @@ export default function ChatView() {
     });
   }, [createConversation, setActiveConversationId]);
 
-  const isReady = !!activeConversationId && !loadingConvos;
-  const isLoadingState = loadingConvos || loadingMessages;
+  const conversationReady = !!activeConversationId;
+  // Only block on the very first page load before we have any data
+  const showInitialLoader = loadingConvos && !activeConversationId;
+  const composerDisabled = isStreaming || !conversationReady || createConversation.isPending;
 
   return (
     <div className="flex h-[calc(100vh-53px)] flex-col">
@@ -68,7 +65,7 @@ export default function ChatView() {
         style={{ background: "rgba(18,30,18,0.6)" }}
       >
         <div className="flex items-center gap-3">
-          <h1 className="text-sm font-semibold text-[#d8f0d8]">Chat</h1>
+          <h1 className="text-sm font-semibold text-[#d8f0d8]">Chat with QA Tester</h1>
 
           {/* Conversation selector */}
           {conversations && conversations.length > 1 && (
@@ -104,8 +101,50 @@ export default function ChatView() {
         </button>
       </div>
 
-      {/* Loading state */}
-      {isLoadingState && !messages?.length && (
+      {/* Error banner (send errors) */}
+      {error && (
+        <div className="mx-4 mt-2 flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-400 sm:mx-6">
+          <svg
+            className="h-4 w-4 shrink-0"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+            />
+          </svg>
+          <span className="flex-1">{error}</span>
+          <button onClick={clearError} className="text-xs underline hover:text-red-300">
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Conversation creation error */}
+      {createConversation.isError && (
+        <div className="mx-4 mt-2 flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-400 sm:mx-6">
+          <span className="flex-1">
+            Failed to start conversation.{" "}
+            <button
+              onClick={() =>
+                createConversation.mutate("New Conversation", {
+                  onSuccess: (convo) => setActiveConversationId(convo.id),
+                })
+              }
+              className="underline hover:text-red-300"
+            >
+              Retry
+            </button>
+          </span>
+        </div>
+      )}
+
+      {/* Full-page spinner only on very first load */}
+      {showInitialLoader ? (
         <div className="flex flex-1 items-center justify-center">
           <div className="flex items-center gap-2 text-sm text-[#5a805a]">
             <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -126,37 +165,19 @@ export default function ChatView() {
             Loading…
           </div>
         </div>
-      )}
+      ) : (
+        <>
+          {/* Message thread — always shown after initial load */}
+          <ChatThread
+            messages={messages ?? []}
+            isStreaming={isStreaming}
+            streamingContent={streamingContent}
+            isLoadingMessages={loadingMessages && conversationReady}
+          />
 
-      {/* Error banner */}
-      {error && (
-        <div className="mx-4 mt-2 flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-400 sm:mx-6">
-          <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
-            />
-          </svg>
-          <span className="flex-1">{error}</span>
-          <button onClick={clearError} className="text-xs underline hover:text-red-300">
-            Dismiss
-          </button>
-        </div>
-      )}
-
-      {/* Message thread */}
-      {isReady && !isLoadingState && (
-        <ChatThread
-          messages={messages ?? []}
-          isStreaming={isStreaming}
-          streamingContent={streamingContent}
-        />
-      )}
-
-      {/* Composer */}
-      {isReady && (
-        <ChatComposer onSend={handleSend} disabled={isStreaming || !activeConversationId} />
+          {/* Composer */}
+          <ChatComposer onSend={handleSend} disabled={composerDisabled} />
+        </>
       )}
     </div>
   );

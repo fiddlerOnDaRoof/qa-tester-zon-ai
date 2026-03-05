@@ -8,9 +8,10 @@ interface Props {
   messages: Message[];
   isStreaming: boolean;
   streamingContent: string;
+  isLoadingMessages?: boolean;
 }
 
-export default function ChatThread({ messages, isStreaming, streamingContent }: Props) {
+export default function ChatThread({ messages, isStreaming, streamingContent, isLoadingMessages }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

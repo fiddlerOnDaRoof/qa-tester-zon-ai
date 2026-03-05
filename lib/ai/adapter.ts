@@ -1,29 +1,74 @@
-import Anthropic from "@anthropic-ai/sdk";
+/**
+ * AI adapter — uses OpenAI API via fetch (no extra SDK needed).
+ * Model: gpt-4o
+ */
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
+const MODEL = "gpt-4o";
+
+type ChatMessage = { role: "user" | "assistant"; content: string };
+
+function buildMessages(
+  messages: ChatMessage[],
+  systemPrompt: string
+): Array<{ role: string; content: string }> {
+  return [{ role: "system", content: systemPrompt }, ...messages];
+}
 
 export async function streamChat(
-  messages: Array<{ role: "user" | "assistant"; content: string }>,
-  systemPrompt?: string
-): Promise<ReadableStream> {
-  const stream = client.messages.stream({
-    model: "claude-sonnet-4-6",
-    max_tokens: 2048,
-    system: systemPrompt ?? "You are a professional QA tester AI assistant.",
-    messages,
+  messages: ChatMessage[],
+  systemPrompt = "You are a professional QA tester AI assistant."
+): Promise<ReadableStream<Uint8Array>> {
+  const res = await fetch(OPENAI_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      stream: true,
+      messages: buildMessages(messages, systemPrompt),
+    }),
   });
 
-  return new ReadableStream({
+  if (!res.ok) {
+    const err = await res.text().catch(() => res.statusText);
+    throw new Error(`OpenAI API error ${res.status}: ${err}`);
+  }
+
+  const body = res.body;
+  if (!body) throw new Error("No response body from OpenAI");
+
+  return new ReadableStream<Uint8Array>({
     async start(controller) {
+      const reader = body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
       try {
-        for await (const chunk of stream) {
-          if (
-            chunk.type === "content_block_delta" &&
-            chunk.delta.type === "text_delta"
-          ) {
-            controller.enqueue(
-              new TextEncoder().encode(chunk.delta.text)
-            );
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed.startsWith("data: ")) continue;
+            const payload = trimmed.slice(6);
+            if (payload === "[DONE]") continue;
+            try {
+              const json = JSON.parse(payload);
+              const delta: string | undefined = json.choices?.[0]?.delta?.content;
+              if (delta) {
+                controller.enqueue(new TextEncoder().encode(delta));
+              }
+            } catch {
+              // skip malformed SSE chunk
+            }
           }
         }
       } finally {
@@ -34,15 +79,26 @@ export async function streamChat(
 }
 
 export async function chatCompletion(
-  messages: Array<{ role: "user" | "assistant"; content: string }>,
-  systemPrompt?: string
+  messages: ChatMessage[],
+  systemPrompt = "You are a professional QA tester AI assistant."
 ): Promise<string> {
-  const response = await client.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 2048,
-    system: systemPrompt ?? "You are a professional QA tester AI assistant.",
-    messages,
+  const res = await fetch(OPENAI_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      messages: buildMessages(messages, systemPrompt),
+    }),
   });
-  const block = response.content[0];
-  return block.type === "text" ? block.text : "";
+
+  if (!res.ok) {
+    const err = await res.text().catch(() => res.statusText);
+    throw new Error(`OpenAI API error ${res.status}: ${err}`);
+  }
+
+  const data = await res.json();
+  return (data.choices?.[0]?.message?.content as string) ?? "";
 }
