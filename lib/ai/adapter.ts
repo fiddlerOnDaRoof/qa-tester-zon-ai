@@ -1,10 +1,10 @@
 /**
- * AI adapter — uses OpenAI API via fetch (no extra SDK needed).
- * Model: gpt-4o
+ * AI adapter — uses xAI (Grok) API via fetch (OpenAI-compatible).
+ * Model: grok-3
  */
 
-const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
-const MODEL = "gpt-4o";
+const OPENAI_API_URL = "https://api.x.ai/v1/chat/completions";
+const MODEL = "grok-3";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
@@ -23,7 +23,7 @@ export async function streamChat(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      Authorization: `Bearer ${process.env.GROK_API_KEY}`,
     },
     body: JSON.stringify({
       model: MODEL,
@@ -34,11 +34,11 @@ export async function streamChat(
 
   if (!res.ok) {
     const err = await res.text().catch(() => res.statusText);
-    throw new Error(`OpenAI API error ${res.status}: ${err}`);
+    throw new Error(`Grok API error ${res.status}: ${err}`);
   }
 
   const body = res.body;
-  if (!body) throw new Error("No response body from OpenAI");
+  if (!body) throw new Error("No response body from Grok");
 
   return new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -86,7 +86,7 @@ export async function chatCompletion(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      Authorization: `Bearer ${process.env.GROK_API_KEY}`,
     },
     body: JSON.stringify({
       model: MODEL,
@@ -96,7 +96,7 @@ export async function chatCompletion(
 
   if (!res.ok) {
     const err = await res.text().catch(() => res.statusText);
-    throw new Error(`OpenAI API error ${res.status}: ${err}`);
+    throw new Error(`Grok API error ${res.status}: ${err}`);
   }
 
   const data = await res.json();
