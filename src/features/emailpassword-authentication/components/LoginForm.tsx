@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { signInWithEmailPassword, validateEmail, validatePassword } from "../lib/auth";
 
 export default function LoginForm() {
@@ -145,6 +146,17 @@ export default function LoginForm() {
           "Sign In"
         )}
       </button>
+
+      {/* Link to sign up */}
+      <p className="text-center text-xs text-[#5a805a]">
+        Don&apos;t have an account?{" "}
+        <Link
+          href="/signup"
+          className="font-medium text-[#7ab07a] transition-colors hover:text-[#c8e8c8]"
+        >
+          Create one
+        </Link>
+      </p>
     </form>
   );
 }

@@ -41,7 +41,7 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const isAppRoute = pathname.startsWith("/home") || pathname.startsWith("/projects");
-  const isAuthRoute = pathname === "/" || pathname === "/login";
+  const isAuthRoute = pathname === "/" || pathname === "/login" || pathname === "/signup";
 
   if (!user && isAppRoute) {
     // Unauthenticated user trying to reach a protected page → /login
