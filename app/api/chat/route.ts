@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { dbTable } from "@/lib/dbTable";
 import { streamChat } from "@/lib/ai/adapter";
 import { z } from "zod";
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
     const { conversationId, message } = parsed.data;
 
     // Verify conversation belongs to user
-    const { data: convo, error: convoErr } = await supabase
+    const { data: convo, error: convoErr } = await supabaseAdmin
       .from(dbTable("conversations"))
       .select("id")
       .eq("id", conversationId)
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Insert user message
-    const { error: insertErr } = await supabase
+    const { error: insertErr } = await supabaseAdmin
       .from(dbTable("messages"))
       .insert({
         conversation_id: conversationId,
@@ -83,7 +84,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Load conversation history (last 50 messages for context window)
-    const { data: history } = await supabase
+    const { data: history } = await supabaseAdmin
       .from(dbTable("messages"))
       .select("role, content")
       .eq("conversation_id", conversationId)
@@ -109,8 +110,7 @@ export async function POST(req: NextRequest) {
       },
       async flush() {
         // Insert assistant message after stream completes
-        const supa = await createSupabaseServerClient();
-        const { error: assistantErr } = await supa
+        const { error: assistantErr } = await supabaseAdmin
           .from(dbTable("messages"))
           .insert({
             conversation_id: conversationId,

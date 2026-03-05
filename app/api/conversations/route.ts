@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { dbTable } from "@/lib/dbTable";
 import { z } from "zod";
 
@@ -13,7 +14,7 @@ export async function GET() {
     return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from(dbTable("conversations"))
     .select("*")
     .eq("user_id", user.id)
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from(dbTable("conversations"))
     .insert({ user_id: user.id, title: parsed.data.title })
     .select()

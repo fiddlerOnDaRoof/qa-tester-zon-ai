@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { dbTable } from "@/lib/dbTable";
 import { CreateProjectSchema } from "@/src/features/create-project-with-url/lib/validation";
 import { randomUUID } from "crypto";
@@ -16,7 +17,7 @@ export async function GET() {
     return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from(dbTable("projects"))
     .select("*")
     .eq("user_id", user.id)
@@ -59,7 +60,7 @@ export async function POST(req: NextRequest) {
 
   const { name, target_url } = parsed.data;
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from(dbTable("projects"))
     .insert({ user_id: user.id, name, target_url })
     .select()
