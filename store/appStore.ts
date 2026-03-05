@@ -7,11 +7,17 @@ interface AppState {
   activeConversationId: string | null;
   setSelectedProjectId: (id: string | null) => void;
   setActiveConversationId: (id: string | null) => void;
+  reset: () => void;
 }
 
-export const useAppStore = create<AppState>((set) => ({
+const initialState = {
   selectedProjectId: null,
   activeConversationId: null,
+};
+
+export const useAppStore = create<AppState>((set) => ({
+  ...initialState,
   setSelectedProjectId: (id) => set({ selectedProjectId: id }),
   setActiveConversationId: (id) => set({ activeConversationId: id }),
+  reset: () => set(initialState),
 }));
