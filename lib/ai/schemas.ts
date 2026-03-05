@@ -23,7 +23,7 @@ export const CommandIntentSchema = z.object({
     "chat",
     "unknown",
   ]),
-  params: z.record(z.unknown()).optional(),
+  params: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type CommandIntent = z.infer<typeof CommandIntentSchema>;
