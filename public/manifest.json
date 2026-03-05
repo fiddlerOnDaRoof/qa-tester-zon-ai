@@ -4,8 +4,8 @@
   "description": "AI-powered QA testing for web and mobile apps",
   "start_url": "/home",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#2563eb",
+  "background_color": "#0d1a0d",
+  "theme_color": "#29422b",
   "icons": [
     {
       "src": "/icon-192.png",

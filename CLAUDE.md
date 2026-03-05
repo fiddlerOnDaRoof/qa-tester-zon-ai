@@ -2,7 +2,7 @@
 
 - Shared Supabase — ALL table names prefixed with `qa_tester_zon_ai_`
 - Use `dbTable(name)` helper from `lib/dbTable.ts` for all table references
-- Create/alter tables via Management API:
+- Create/alter tables via Management API ($SUPABASE_PROJECT_REF and $SUPABASE_MGMT_TOKEN env vars are ALREADY SET — just use them):
   ```
   curl -s -X POST "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
     -H "Authorization: Bearer $SUPABASE_MGMT_TOKEN" \
