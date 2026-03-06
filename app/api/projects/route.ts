@@ -1,13 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { createServerClient } from "@supabase/ssr";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { dbTable } from "@/lib/dbTable";
 import { CreateProjectSchema } from "@/src/features/create-project-with-url/lib/validation";
 import { randomUUID } from "crypto";
 
-export async function GET() {
+export const dynamic = "force-dynamic";
+
+/**
+ * Build a Supabase server client directly from the NextRequest cookies.
+ * This avoids relying on next/headers cookies() which can be unreliable
+ * in route handlers, especially after login/logout cycles.
+ */
+function createSupabaseFromRequest(req: NextRequest) {
+  const response = NextResponse.next({ request: req });
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          );
+        },
+      },
+    }
+  );
+  return { supabase, response };
+}
+
+export async function GET(req: NextRequest) {
   const requestId = randomUUID();
-  const supabase = await createSupabaseServerClient();
+  const { supabase } = createSupabaseFromRequest(req);
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -33,7 +61,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const requestId = randomUUID();
-  const supabase = await createSupabaseServerClient();
+  const { supabase } = createSupabaseFromRequest(req);
   const {
     data: { user },
   } = await supabase.auth.getUser();

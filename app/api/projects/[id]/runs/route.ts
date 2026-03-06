@@ -1,16 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { createServerClient } from "@supabase/ssr";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { dbTable } from "@/lib/dbTable";
 import { randomUUID } from "crypto";
 
+export const dynamic = "force-dynamic";
+
+function createSupabaseFromRequest(req: NextRequest) {
+  const response = NextResponse.next({ request: req });
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          );
+        },
+      },
+    }
+  );
+  return { supabase, response };
+}
+
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const requestId = randomUUID();
   const { id: projectId } = await params;
-  const supabase = await createSupabaseServerClient();
+  const { supabase } = createSupabaseFromRequest(req);
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -54,7 +77,7 @@ export async function POST(
 ) {
   const requestId = randomUUID();
   const { id: projectId } = await params;
-  const supabase = await createSupabaseServerClient();
+  const { supabase } = createSupabaseFromRequest(req);
   const {
     data: { user },
   } = await supabase.auth.getUser();

@@ -2,7 +2,10 @@ import type { Project } from "@/types";
 
 /** Fetch all projects for the current user. */
 export async function fetchProjects(): Promise<Project[]> {
-  const res = await fetch("/api/projects");
+  const res = await fetch("/api/projects", {
+    credentials: "include",
+    cache: "no-store",
+  });
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: "Request failed" }));
     throw new Error(body.error ?? `Failed to fetch projects (${res.status})`);
@@ -19,6 +22,7 @@ export async function createProject(input: {
   const res = await fetch("/api/projects", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: JSON.stringify(input),
   });
   if (!res.ok) {

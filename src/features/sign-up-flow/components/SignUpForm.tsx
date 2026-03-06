@@ -117,6 +117,7 @@ export default function SignUpForm() {
       } else if (needsEmailConfirmation) {
         setConfirmationEmail(email.trim());
       } else {
+        router.refresh();
         router.replace("/home");
       }
     } finally {

@@ -1,11 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { createServerClient } from "@supabase/ssr";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { dbTable } from "@/lib/dbTable";
 import { z } from "zod";
 
-export async function GET() {
-  const supabase = await createSupabaseServerClient();
+function createSupabaseFromRequest(req: NextRequest) {
+  const response = NextResponse.next({ request: req });
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          );
+        },
+      },
+    }
+  );
+  return { supabase, response };
+}
+
+export async function GET(req: NextRequest) {
+  const { supabase } = createSupabaseFromRequest(req);
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -32,7 +53,7 @@ const CreateSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const supabase = await createSupabaseServerClient();
+  const { supabase } = createSupabaseFromRequest(req);
   const {
     data: { user },
   } = await supabase.auth.getUser();

@@ -37,6 +37,7 @@ export default function LoginForm() {
         setSubmitError(error);
         setPassword("");
       } else {
+        router.refresh();
         router.replace("/home");
       }
     } finally {
